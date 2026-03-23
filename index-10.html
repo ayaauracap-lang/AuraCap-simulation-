@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AuraCap – Industrial Pollution Estimator</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --navy: #0a1628;
+    --navy2: #0f2044;
+    --navy3: #162b58;
+    --gold: #c9a84c;
+    --gold2: #e8c76a;
+    --gold3: #f5dfa0;
+    --teal: #00c9b1;
+    --teal2: #00e5ce;
+    --red: #ff4e4e;
+    --green: #2ecc71;
+    --text: #d4e3ff;
+    --text2: #8aa8d0;
+    --border: rgba(201,168,76,0.25);
+    --card: rgba(15,32,68,0.85);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--navy);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(201,168,76,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(201,168,76,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Glowing orbs */
+  body::after {
+    content: '';
+    position: fixed;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(0,201,177,0.06) 0%, transparent 70%);
+    top: -200px; right: -200px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .orb2 {
+    position: fixed;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(201,168,76,0.05) 0%, transparent 70%);
+    bottom: -100px; left: -100px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+  }
+
+  /* HEADER */
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+    animation: fadeDown 0.7s ease both;
+  }
+
+  .header img {
+    height: 64px;
+    margin-bottom: 20px;
+    filter: drop-shadow(0 0 16px rgba(201,168,76,0.4));
+  }
+
+  .header h1 {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: clamp(1.8rem, 5vw, 2.8rem);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    background: linear-gradient(135deg, var(--gold2), var(--teal2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.1;
+  }
+
+  .header p {
+    color: var(--text2);
+    font-size: 0.95rem;
+    margin-top: 10px;
+    letter-spacing: 0.03em;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0,201,177,0.1);
+    border: 1px solid rgba(0,201,177,0.3);
+    color: var(--teal2);
+    font-size: 0.75rem;
+    font-family: 'Space Mono', monospace;
+    padding: 4px 12px;
+    border-radius: 100px;
+    margin-top: 14px;
+    letter-spacing: 0.06em;
+  }
+
+  /* SECTION CARDS */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 32px;
+    margin-bottom: 20px;
+    backdrop-filter: blur(12px);
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .card:nth-child(2) { animation-delay: 0.1s; }
+  .card:nth-child(3) { animation-delay: 0.2s; }
+  .card:nth-child(4) { animation-delay: 0.3s; }
+
+  .card-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gold2);
+    margin-bottom: 22px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .card-title::before {
+    content: '';
+    display: block;
+    width: 4px; height: 18px;
+    background: linear-gradient(to bottom, var(--gold2), var(--teal));
+    border-radius: 2px;
+  }
+
+  /* FORM */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+
+  .form-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .form-grid.cols-1 { grid-template-columns: 1fr; }
+
+  @media (max-width: 600px) {
+    .form-grid, .form-grid.cols-3 { grid-template-columns: 1fr; }
+    .card { padding: 20px 18px; }
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .form-group.full { grid-column: 1 / -1; }
+
+  label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text2);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  input[type=number], select {
+    background: rgba(10,22,40,0.8);
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+  }
+
+  input[type=number]:focus, select:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(201,168,76,0.12);
+  }
+
+  select option { background: var(--navy2); color: var(--text); }
+
+  /* FUEL ROW */
+  .fuel-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+    align-items: end;
+  }
+
+  @media (max-width: 600px) { .fuel-row { grid-template-columns: 1fr; } }
+
+  /* CHECKBOXES */
+  .check-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+  }
+
+  .check-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: rgba(10,22,40,0.6);
+    border: 1px solid rgba(201,168,76,0.15);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    font-size: 0.9rem;
+    color: var(--text2);
+  }
+
+  .check-item:hover { border-color: var(--gold); background: rgba(201,168,76,0.05); }
+  .check-item input { accent-color: var(--gold); width: 16px; height: 16px; cursor: pointer; }
+  .check-item input:checked + span { color: var(--gold2); }
+
+  /* WtE SPECIAL SECTION */
+  #wte-section {
+    display: none;
+    margin-top: 18px;
+    padding: 20px;
+    background: rgba(0,201,177,0.05);
+    border: 1px solid rgba(0,201,177,0.2);
+    border-radius: 12px;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  #wte-section.visible { display: block; }
+
+  .wte-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--teal2);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .wte-title svg { width: 16px; height: 16px; }
+
+  /* CALCULATE BUTTON */
+  .btn-calc {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--gold), var(--gold2));
+    border: none;
+    border-radius: 10px;
+    color: var(--navy);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.2s, opacity 0.2s;
+    box-shadow: 0 4px 24px rgba(201,168,76,0.3);
+    margin-top: 8px;
+  }
+
+  .btn-calc:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(201,168,76,0.4);
+  }
+
+  .btn-calc:active { transform: translateY(0); }
+
+  /* RESULTS */
+  #results { display: none; animation: fadeUp 0.5s ease both; }
+  #results.visible { display: block; }
+
+  .results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .results-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--gold2);
+  }
+
+  .aqi-badge {
+    padding: 6px 16px;
+    border-radius: 100px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+  }
+
+  .aqi-low    { background: rgba(46,204,113,0.15); border: 1px solid #2ecc71; color: #2ecc71; }
+  .aqi-med    { background: rgba(241,196,15,0.15);  border: 1px solid #f1c40f; color: #f1c40f; }
+  .aqi-high   { background: rgba(231,76,60,0.15);   border: 1px solid #e74c3c; color: #e74c3c; }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+
+  .metric-card {
+    background: rgba(10,22,40,0.8);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    transition: transform 0.2s;
+  }
+
+  .metric-card:hover { transform: translateY(-2px); }
+
+  .metric-label {
+    font-size: 0.7rem;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.08em;
+    color: var(--text2);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+
+  .metric-value {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--gold2);
+    line-height: 1;
+  }
+
+  .metric-unit {
+    font-size: 0.72rem;
+    color: var(--text2);
+    margin-top: 4px;
+  }
+
+  .metric-card.highlight {
+    border-color: rgba(0,201,177,0.4);
+    background: rgba(0,201,177,0.06);
+  }
+  .metric-card.highlight .metric-value { color: var(--teal2); }
+
+  .metric-card.danger {
+    border-color: rgba(255,78,78,0.4);
+    background: rgba(255,78,78,0.06);
+  }
+  .metric-card.danger .metric-value { color: #ff7f7f; }
+
+  /* WtE SPECIFIC METRICS */
+  .wte-metrics {
+    background: rgba(0,201,177,0.04);
+    border: 1px solid rgba(0,201,177,0.2);
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 20px;
+  }
+
+  .wte-metrics-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--teal2);
+    margin-bottom: 14px;
+  }
+
+  /* RECOMMENDATIONS */
+  .reco-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .reco-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 16px;
+    background: rgba(10,22,40,0.7);
+    border: 1px solid rgba(201,168,76,0.15);
+    border-radius: 10px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--text2);
+    transition: border-color 0.2s;
+  }
+
+  .reco-item:hover { border-color: var(--gold); color: var(--text); }
+
+  .reco-icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+    background: rgba(201,168,76,0.1);
+  }
+
+  .reco-icon.teal { background: rgba(0,201,177,0.1); }
+  .reco-icon.green { background: rgba(46,204,113,0.1); }
+
+  /* DIVIDER */
+  .divider {
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--border), transparent);
+    margin: 6px 0 20px;
+  }
+
+  /* FOOTER */
+  .footer {
+    text-align: center;
+    margin-top: 48px;
+    color: var(--text2);
+    font-size: 0.8rem;
+    opacity: 0.7;
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* ANIMATIONS */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* INSTRUCTIONS TOGGLE */
+  .instructions {
+    background: rgba(0,201,177,0.04);
+    border: 1px solid rgba(0,201,177,0.2);
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 0.85rem;
+    color: var(--text2);
+    line-height: 1.7;
+    margin-bottom: 20px;
+  }
+
+  .instructions strong { color: var(--teal2); }
+</style>
+</head>
+<body>
+<div class="orb2"></div>
+<div class="wrapper">
+
+  <!-- HEADER -->
+  <div class="header">
+    <img src="https://auracapsimulation.tiiny.site/Auracap.jpeg" alt="AuraCap Logo" onerror="this.style.display='none'"/>
+    <h1>AuraCap Industrial Pollution Estimator</h1>
+    <p>Smart Environmental Impact & Zero-Carbon Planning Tool</p>
+    <div class="badge">⚡ By AuraCap — MENA Carbon Solutions</div>
+  </div>
+
+  <!-- INSTRUCTIONS -->
+  <div class="instructions">
+    <strong>Instructions:</strong> Fill in the following information as accurately as possible. The system will estimate daily pollution emissions and provide zero-carbon recommendations based on AuraCap technologies.
+  </div>
+
+  <!-- SECTION 1: Industry -->
+  <div class="card">
+    <div class="card-title">Industry Information</div>
+
+    <div class="form-grid cols-1">
+      <div class="form-group">
+        <label>Industry Type</label>
+        <select id="industryType" onchange="handleIndustryChange()">
+          <option value="other">Other Type</option>
+          <option value="cement">Cement Factory</option>
+          <option value="power">Power Plant</option>
+          <option value="steel">Steel Mill</option>
+          <option value="chemical">Chemical Plant</option>
+          <option value="food">Food Processing</option>
+          <option value="pharma">Pharmaceutical Plant</option>
+          <option value="plastic">Plastic Manufacturing</option>
+          <option value="paint">Paint / Solvent Industry</option>
+          <option value="refinery">Refinery or Petrochemical Plant</option>
+          <option value="wte">♻️ Waste to Energy (WtE) Plant</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- WtE Extra Fields -->
+    <div id="wte-section">
+      <div class="wte-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6l3 1m0 0l-3 9a5 5 0 006.9 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5 5 0 006.9 0M18 7l3 9M18 7l-6-2m0-2v2m0 16V5"/></svg>
+        Waste to Energy — Additional Parameters
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Waste Type</label>
+          <select id="wasteType">
+            <option value="msw">Municipal Solid Waste (MSW)</option>
+            <option value="industrial">Industrial Waste</option>
+            <option value="biomass">Biomass Waste</option>
+            <option value="mixed">Mixed Waste</option>
+            <option value="medical">Medical / Hazardous Waste</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Combustion Technology</label>
+          <select id="wteTech">
+            <option value="incineration">Incineration (Grate Furnace)</option>
+            <option value="gasification">Gasification</option>
+            <option value="pyrolysis">Pyrolysis</option>
+            <option value="plasma">Plasma Arc</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Waste Input (Ton/Day)</label>
+          <input type="number" id="wasteTons" value="100" min="1" max="5000" placeholder="e.g. 100"/>
+        </div>
+        <div class="form-group">
+          <label>Energy Recovery Efficiency (%)</label>
+          <input type="number" id="wteEfficiency" value="25" min="10" max="40" placeholder="10–40"/>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="card-title" style="margin-top:4px;">Emission Control Systems by AuraCap</div>
+    <div class="check-grid">
+      <label class="check-item"><input type="checkbox" id="ctrl_esp"/><span>Electrostatic Precipitator (ESP)</span></label>
+      <label class="check-item"><input type="checkbox" id="ctrl_bag"/><span>Bag Filters</span></label>
+      <label class="check-item"><input type="checkbox" id="ctrl_scrub"/><span>Scrubbers</span></label>
+      <label class="check-item"><input type="checkbox" id="ctrl_scr"/><span>SCR (NOₓ Control)</span></label>
+      <label class="check-item"><input type="checkbox" id="ctrl_cat"/><span>Catalytic Oxidizers</span></label>
+      <label class="check-item"><input type="checkbox" id="ctrl_cca"/><span>Carbon Capture by AuraCap ✦</span></label>
+      <label class="check-item"><input type="checkbox" id="ctrl_ccr"/><span>Regular Carbon Capture</span></label>
+    </div>
+  </div>
+
+  <!-- SECTION 2: Fuel & Operation -->
+  <div class="card">
+    <div class="card-title">Fuel & Operation Data</div>
+    <div class="fuel-row">
+      <div class="form-group">
+        <label>Fuel Consumption Rate</label>
+        <input type="number" id="fuelRate" value="100" min="0.1" step="0.1" placeholder="Amount"/>
+      </div>
+      <div class="form-group">
+        <label>Unit</label>
+        <select id="fuelUnit">
+          <option value="lph">Liters/hour</option>
+          <option value="kgph">kg/hour</option>
+          <option value="nm3ph">Nm³/hour</option>
+          <option value="kw">kW thermal</option>
+          <option value="mw">MW thermal</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Fuel Type</label>
+        <select id="fuelType">
+          <option value="diesel">Diesel</option>
+          <option value="hfo">Heavy Fuel Oil (HFO)</option>
+          <option value="ng">Natural Gas</option>
+          <option value="lpg">LPG</option>
+          <option value="coal">Coal</option>
+          <option value="biomass">Biomass</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-grid" style="margin-top:18px;">
+      <div class="form-group">
+        <label>Operating Hours per Day (1–24)</label>
+        <input type="number" id="opHours" value="16" min="1" max="24"/>
+      </div>
+      <div class="form-group">
+        <label>Shutdown Days per Year (0–364)</label>
+        <input type="number" id="shutdownDays" value="30" min="0" max="364"/>
+      </div>
+      <div class="form-group">
+        <label>Load Change (%)</label>
+        <input type="number" id="loadChange" value="80" min="1" max="99"/>
+      </div>
+      <div class="form-group">
+        <label>Average Annual Temperature (°C)</label>
+        <input type="number" id="ambientTemp" value="25" min="-20" max="60"/>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 3: Stack Data -->
+  <div class="card">
+    <div class="card-title">Stack (Chimney) Data</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Number of Stacks</label>
+        <input type="number" id="numStacks" value="1" min="1" max="20"/>
+      </div>
+    </div>
+    <button class="btn-calc" onclick="calculate()">▶ Calculate Pollution</button>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results" class="card">
+    <div class="results-header">
+      <div class="results-title">Pollution Results per Day</div>
+      <div id="aqiBadge" class="aqi-badge">—</div>
+    </div>
+
+    <div class="metrics-grid" id="metricsGrid"></div>
+
+    <!-- WtE-specific results block -->
+    <div class="wte-metrics" id="wteResults" style="display:none;">
+      <div class="wte-metrics-title">♻️ Waste to Energy — Specific Metrics</div>
+      <div class="metrics-grid" id="wteMetricsGrid"></div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="card-title">AuraCap Recommendations</div>
+    <div class="reco-list" id="recoList"></div>
+  </div>
+
+</div>
+
+<div class="footer">© 2025 AuraCap — إبداع لحلول وتقنيات الكربون — All rights reserved</div>
+
+<script>
+// ── Emission factors (kg per liter/kg/Nm3 of fuel) ──
+const EF = {
+  diesel:  { CO2: 2.68,  NOx: 0.05,   SO2: 0.008, PM: 0.002,  CO: 0.006, VOC: 0.001 },
+  hfo:     { CO2: 3.11,  NOx: 0.07,   SO2: 0.05,  PM: 0.006,  CO: 0.004, VOC: 0.002 },
+  ng:      { CO2: 2.02,  NOx: 0.025,  SO2: 0.0001,PM: 0.0005, CO: 0.003, VOC: 0.0005 },
+  lpg:     { CO2: 1.55,  NOx: 0.02,   SO2: 0.0001,PM: 0.0003, CO: 0.002, VOC: 0.0004 },
+  coal:    { CO2: 2.42,  NOx: 0.09,   SO2: 0.08,  PM: 0.015,  CO: 0.012, VOC: 0.003 },
+  biomass: { CO2: 0.41,  NOx: 0.04,   SO2: 0.002, PM: 0.008,  CO: 0.018, VOC: 0.005 },
+  other:   { CO2: 2.3,   NOx: 0.04,   SO2: 0.01,  PM: 0.003,  CO: 0.006, VOC: 0.001 },
+};
+
+// WtE emission factors per ton of waste
+const WTE_EF = {
+  msw:        { CO2: 900,   NOx: 1.8,  SO2: 0.8,  PM: 0.3,  dioxin: 0.00001, HCl: 0.5 },
+  industrial: { CO2: 1100,  NOx: 2.2,  SO2: 1.5,  PM: 0.5,  dioxin: 0.00002, HCl: 0.8 },
+  biomass:    { CO2: 350,   NOx: 1.2,  SO2: 0.2,  PM: 0.4,  dioxin: 0.000005,HCl: 0.1 },
+  mixed:      { CO2: 850,   NOx: 1.9,  SO2: 1.1,  PM: 0.4,  dioxin: 0.000015,HCl: 0.6 },
+  medical:    { CO2: 1300,  NOx: 2.5,  SO2: 2.0,  PM: 0.7,  dioxin: 0.00004, HCl: 1.2 },
+};
+
+// Control system reduction factors
+const CTRL = {
+  esp:  { PM: 0.97, VOC: 0.1 },
+  bag:  { PM: 0.99, dioxin: 0.95 },
+  scrub:{ SO2: 0.85, HCl: 0.90, NOx: 0.2 },
+  scr:  { NOx: 0.85 },
+  cat:  { VOC: 0.90, CO: 0.85 },
+  cca:  { CO2: 0.90 },
+  ccr:  { CO2: 0.70 },
+};
+
+function handleIndustryChange() {
+  const v = document.getElementById('industryType').value;
+  const sec = document.getElementById('wte-section');
+  sec.classList.toggle('visible', v === 'wte');
+}
+
+function getControls() {
+  return {
+    esp:  document.getElementById('ctrl_esp').checked,
+    bag:  document.getElementById('ctrl_bag').checked,
+    scrub:document.getElementById('ctrl_scrub').checked,
+    scr:  document.getElementById('ctrl_scr').checked,
+    cat:  document.getElementById('ctrl_cat').checked,
+    cca:  document.getElementById('ctrl_cca').checked,
+    ccr:  document.getElementById('ctrl_ccr').checked,
+  };
+}
+
+function applyControls(emissions, ctrl) {
+  let e = { ...emissions };
+  const apply = (key, reduction) => { if (e[key] !== undefined) e[key] *= (1 - reduction); };
+  if (ctrl.esp)  { apply('PM', CTRL.esp.PM);   apply('VOC', CTRL.esp.VOC); }
+  if (ctrl.bag)  { apply('PM', CTRL.bag.PM);   if (e.dioxin) e.dioxin *= (1 - CTRL.bag.dioxin); }
+  if (ctrl.scrub){ apply('SO2', CTRL.scrub.SO2); apply('NOx', CTRL.scrub.NOx); if (e.HCl) e.HCl *= (1-CTRL.scrub.HCl); }
+  if (ctrl.scr)  { apply('NOx', CTRL.scr.NOx); }
+  if (ctrl.cat)  { apply('VOC', CTRL.cat.VOC); apply('CO', CTRL.cat.CO); }
+  if (ctrl.cca)  { apply('CO2', CTRL.cca.CO2); }
+  else if (ctrl.ccr) { apply('CO2', CTRL.ccr.CO2); }
+  return e;
+}
+
+function calculate() {
+  const industry   = document.getElementById('industryType').value;
+  const fuelRate   = parseFloat(document.getElementById('fuelRate').value) || 0;
+  const fuelUnit   = document.getElementById('fuelUnit').value;
+  const fuelType   = document.getElementById('fuelType').value;
+  const opHours    = parseFloat(document.getElementById('opHours').value) || 16;
+  const shutdown   = parseFloat(document.getElementById('shutdownDays').value) || 0;
+  const load       = (parseFloat(document.getElementById('loadChange').value) || 80) / 100;
+  const temp       = parseFloat(document.getElementById('ambientTemp').value) || 25;
+  const stacks     = parseInt(document.getElementById('numStacks').value) || 1;
+  const ctrl       = getControls();
+
+  // Unit conversion to kg/hour equivalent
+  const unitFactor = { lph: 0.84, kgph: 1, nm3ph: 0.73, kw: 0.086, mw: 86 };
+  const fuelKgH = fuelRate * (unitFactor[fuelUnit] || 1);
+
+  // Temperature correction (+1% per 10°C above 15°C for thermal inefficiency)
+  const tempCorr = 1 + Math.max(0, (temp - 15) * 0.001);
+
+  const ef = EF[fuelType] || EF.other;
+  const dailyFuelKg = fuelKgH * opHours * load * tempCorr;
+
+  // Base fuel-based emissions (kg/day)
+  let emFuel = {};
+  Object.keys(ef).forEach(k => emFuel[k] = ef[k] * dailyFuelKg * stacks);
+  emFuel = applyControls(emFuel, ctrl);
+
+  // WtE additional emissions
+  let wteData = null;
+  if (industry === 'wte') {
+    const wasteType  = document.getElementById('wasteType').value;
+    const wasteTons  = parseFloat(document.getElementById('wasteTons').value) || 100;
+    const efficiency = (parseFloat(document.getElementById('wteEfficiency').value) || 25) / 100;
+    const wteTech    = document.getElementById('wteTech').value;
+
+    const wef = WTE_EF[wasteType] || WTE_EF.msw;
+
+    // Tech factor adjustments
+    const techFactor = { incineration: 1.0, gasification: 0.65, pyrolysis: 0.5, plasma: 0.55 };
+    const tf = techFactor[wteTech] || 1.0;
+
+    let emWte = {};
+    Object.keys(wef).forEach(k => emWte[k] = wef[k] * wasteTons * tf);
+    emWte = applyControls(emWte, ctrl);
+
+    const energyRecovered = wasteTons * 2.8 * efficiency; // MWh/day (2.8 MWh/ton typical LHV)
+    const netCO2Saving    = wasteTons * 0.5; // avoided landfill CH4 CO2-eq
+    const ashTons         = wasteTons * 0.25 * tf;
+
+    // Store wteData BEFORE merging into emFuel (so dioxin/HCl values are correct)
+    wteData = {
+      dioxin: emWte.dioxin || 0,
+      HCl:    emWte.HCl    || 0,
+      energyRecovered,
+      netCO2Saving,
+      ashTons,
+      wasteTons,
+      wasteType,
+      wteTech
+    };
+
+    // Merge WtE pollutants into main fuel emissions
+    emFuel.CO2 = (emFuel.CO2 || 0) + (emWte.CO2 || 0);
+    emFuel.NOx = (emFuel.NOx || 0) + (emWte.NOx || 0);
+    emFuel.SO2 = (emFuel.SO2 || 0) + (emWte.SO2 || 0);
+    emFuel.PM  = (emFuel.PM  || 0) + (emWte.PM  || 0);
+  }
+
+  renderResults(emFuel, wteData, ctrl, industry, opHours, shutdown);
+}
+
+function fmt(n) {
+  if (n >= 1000) return (n/1000).toFixed(2) + ' t';
+  if (n >= 1)    return n.toFixed(2) + ' kg';
+  return (n * 1000).toFixed(1) + ' g';
+}
+
+function renderResults(em, wteData, ctrl, industry, opHours, shutdown) {
+  const res = document.getElementById('results');
+  res.classList.add('visible');
+  res.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // AQI score
+  const totalLoad = (em.CO2||0)/100 + (em.NOx||0)*5 + (em.SO2||0)*5 + (em.PM||0)*10;
+  let aqiLevel = 'LOW', aqiClass = 'aqi-low', aqiText = '✓ LOW IMPACT';
+  if (totalLoad > 500) { aqiLevel = 'HIGH'; aqiClass = 'aqi-high'; aqiText = '⚠ HIGH IMPACT'; }
+  else if (totalLoad > 100) { aqiLevel = 'MED'; aqiClass = 'aqi-med'; aqiText = '△ MODERATE IMPACT'; }
+
+  document.getElementById('aqiBadge').className = 'aqi-badge ' + aqiClass;
+  document.getElementById('aqiBadge').textContent = aqiText;
+
+  // Main metrics
+  const metrics = [
+    { label: 'CO₂ (Carbon Dioxide)', value: em.CO2||0, cls: 'danger' },
+    { label: 'NOₓ (Nitrogen Oxides)', value: em.NOx||0, cls: '' },
+    { label: 'SO₂ (Sulfur Dioxide)', value: em.SO2||0, cls: '' },
+    { label: 'PM (Particulate Matter)', value: em.PM||0, cls: '' },
+    { label: 'CO (Carbon Monoxide)', value: em.CO||0, cls: '' },
+    { label: 'VOC', value: em.VOC||0, cls: '' },
+  ];
+
+  document.getElementById('metricsGrid').innerHTML = metrics.map(m =>
+    `<div class="metric-card ${m.cls}">
+      <div class="metric-label">${m.label}</div>
+      <div class="metric-value">${fmt(m.value)}</div>
+      <div class="metric-unit">per day</div>
+    </div>`
+  ).join('');
+
+  // WtE specific
+  const wteRes = document.getElementById('wteResults');
+  if (wteData) {
+    wteRes.style.display = 'block';
+    const wteMetrics = [
+      { label: 'Energy Recovered', value: wteData.energyRecovered.toFixed(1), unit: 'MWh/day', cls: 'highlight' },
+      { label: 'CO₂-eq Avoided (Landfill)', value: wteData.netCO2Saving.toFixed(1), unit: 'ton/day', cls: 'highlight' },
+      { label: 'Dioxins/Furans', value: wteData.dioxin ? (wteData.dioxin*1e6).toFixed(3) : 'N/A', unit: 'mg/day', cls: 'danger' },
+      { label: 'HCl Emissions', value: wteData.HCl ? wteData.HCl.toFixed(2) : 'N/A', unit: 'kg/day', cls: '' },
+      { label: 'Bottom Ash', value: wteData.ashTons.toFixed(1), unit: 'ton/day', cls: '' },
+      { label: 'Waste Processed', value: wteData.wasteTons, unit: 'ton/day', cls: '' },
+    ];
+    document.getElementById('wteMetricsGrid').innerHTML = wteMetrics.map(m =>
+      `<div class="metric-card ${m.cls}">
+        <div class="metric-label">${m.label}</div>
+        <div class="metric-value">${m.value}</div>
+        <div class="metric-unit">${m.unit}</div>
+      </div>`
+    ).join('');
+  } else {
+    wteRes.style.display = 'none';
+  }
+
+  // Recommendations
+  const recos = [];
+
+  if (!ctrl.cca && !ctrl.ccr) {
+    recos.push({ icon: '⚡', cls: 'teal', text: 'Deploy <strong>Carbon Capture by AuraCap</strong> to reduce CO₂ emissions by up to 90%. This is the highest-impact action for immediate decarbonization compliance.' });
+  }
+  if (ctrl.cca) {
+    recos.push({ icon: '✦', cls: 'teal', text: 'AuraCap Carbon Capture installed — captured CO₂ can be converted to <strong>Precipitated Calcium Carbonate (PCC)</strong> for industrial resale, creating a revenue stream from waste carbon.' });
+  }
+  if (!ctrl.scrub && (em.SO2||0) > 5) {
+    recos.push({ icon: '🌿', cls: '', text: 'High SO₂ detected. Install <strong>Wet Scrubbers</strong> to achieve up to 85% SO₂ removal and protect surrounding communities from acid rain risk.' });
+  }
+  if (!ctrl.esp && !ctrl.bag && (em.PM||0) > 2) {
+    recos.push({ icon: '🔬', cls: '', text: 'Significant PM emissions detected. Install <strong>Bag Filters</strong> (99% efficiency) or <strong>ESP</strong> for particulate control — required for EU CBAM compliance.' });
+  }
+  if (industry === 'wte') {
+    recos.push({ icon: '♻️', cls: 'teal', text: `<strong>Waste to Energy Integration:</strong> The ${wteData?.wteTech || 'WtE'} process recovers ${wteData?.energyRecovered?.toFixed(1)} MWh/day. Consider AuraCap ESG certification to quantify avoided emissions vs landfill (${wteData?.netCO2Saving?.toFixed(1)} ton CO₂-eq/day avoided).` });
+    if (!ctrl.bag) {
+      recos.push({ icon: '⚠️', cls: '', text: 'WtE plants require <strong>Bag Filters</strong> for dioxin/furan removal (95% efficiency). This is mandatory under EU Waste Incineration Directive (WID 2000/76/EC).' });
+    }
+    recos.push({ icon: '📊', cls: 'green', text: 'AuraCap can provide <strong>ISO 14064 Carbon Accounting</strong> for your WtE plant, enabling Verra VCS carbon credit registration for the avoided landfill CH₄ emissions.' });
+  }
+  if ((em.CO2||0) > 500) {
+    recos.push({ icon: '📋', cls: 'green', text: `Your facility emits an estimated <strong>${((em.CO2||0)/1000).toFixed(1)} tCO₂/day</strong> (~${((em.CO2||0)*335/1000).toFixed(0)} tCO₂/year). This likely triggers <strong>EU CBAM</strong> reporting obligations if you export to EU markets.` });
+  }
+  if (recos.length === 0) {
+    recos.push({ icon: '✅', cls: 'green', text: 'Good emission control configuration detected. Contact AuraCap for a detailed ESG audit and carbon credit registration to monetize your environmental performance.' });
+  }
+
+  document.getElementById('recoList').innerHTML = recos.map(r =>
+    `<div class="reco-item">
+      <div class="reco-icon ${r.cls}">${r.icon}</div>
+      <div>${r.text}</div>
+    </div>`
+  ).join('');
+}
+</script>
+</body>
+</html>
